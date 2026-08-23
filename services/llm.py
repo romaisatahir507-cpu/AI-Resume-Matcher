@@ -40,32 +40,69 @@ def generate_llm_response(prompt: str) -> str:
 
 def analyze_resume(resume_text: str) -> str:
     """
-    Analyze a candidate resumeusing the LLM.
+    Analyze a candidate resume using the LLM.
     """
 
     prompt = f"""
     You are an expert AI recruitment assistant.
 
-    Analyze the following candidate resume.
+    Analyze the following candidate resume and create a professional candidate profile.
 
-    Resume:
+    CANDIDATE RESUME
     --------------------
     {resume_text}
     --------------------
 
-    Provide the following information:
-    1. Candidate's main skills
-    2. Technical skills
-    3. Soft skills
-    4. Education
-    5. Work experience
-    6. Years of experience if available
-    7. Main areas of expertise
-    8. Potential job roles
-    9. Strengths
-    10. Missing or weak areas
+    Provide the analysis using exactly these sections:
 
-    Keep the analysis clear, structured, and concise.
+    1. Candidate Summary
+       - Give a short professional summary of the candidate.
+
+    2. Technical Skills
+       - List the technical skills explicitly found in the resume.
+
+    3. Soft Skills
+       - List soft skills explicitly supported by the resume.
+
+    4. Education
+       - Mention degrees, institutions, fields of study, and relevant
+         education information available in the resume.
+
+    5. Work Experience
+       - Summarize the candidate's work experience, including job titles,
+         companies, responsibilities, and achievements when available.
+
+    6. Projects
+       - Summarize important projects mentioned in the resume.
+
+    7. Certifications
+       - List certifications or professional training if available.
+
+    8. Experience Level
+       - Estimate the candidate's experience level such as:
+         Entry Level, Junior, Mid-Level, or Senior.
+       - Only make this assessment using evidence from the resume.
+
+    9. Strengths
+       - Identify the candidate's strongest professional qualities based
+         only on the resume.
+
+    10. Areas for Improvement
+        - Identify skills, experience, or qualifications that appear weak
+          or limited based only on the resume.
+
+    IMPORTANT RULES:
+    - Do not invent information.
+    - Only use information available in the resume.
+    - If information is not available, say "Not mentioned in resume."
+    - Do not compare the candidate with any job description.
+    - Do not provide a match score.
+    - Do not provide matching skills.
+    - Do not provide missing job-specific skills.
+    - Keep the analysis clear, professional, structured, and concise.
+
+
+    Keep the analysis clear, professional, structured, and concise.
     """
 
     return generate_llm_response(prompt)

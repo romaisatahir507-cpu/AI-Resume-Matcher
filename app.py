@@ -190,7 +190,7 @@ if st.button("Match Resume with Job"):
             ):
             
                 match_result = match_resume_with_job(
-                                cleaned_text,
+                                st.session_state.cleaned_text,
                                 job_description
                             )
 
@@ -198,57 +198,61 @@ if st.button("Match Resume with Job"):
                             # 10.1 Display Match Result
                             #---------------#
 
-                            if "error" in match_result:
-                                st.error(match_result["error"])
-                                st.write(match_result["raw_response"])
+            if "error" in match_result:
+                st.error(match_result["error"])
+                st.write(match_result["raw_response"])
 
-                            else:
-                                st.subheader("AI Resume Match Result")
-                                st.metric("Match Score", f"{match_result['match_score']}%")
-                                st.write(
-                                    f"**Recommendation:**"
-                                    f"{match_result['recommendation']}"
-                                )
-                                st.write("###Matching Skills")
+            else:
+                st.subheader("AI Resume Match Result")
+                st.metric("Match Score", f"{match_result['match_score']}%")
+                st.write(
+                    f"**Recommendation:**"
+                    f"{match_result['recommendation']}"
+                )
+                st.write("###Matching Skills")
 
-                                for skill in match_result["matching_skills"]:
-                                    st.write(f"✓ {skill}")
+                for skill in match_result["matching_skills"]:
+                    st.write(f"✓ {skill}")
 
-                                st.write("###Missing Skills")
+                st.write("###Missing Skills")
 
-                                for skill in match_result["missing_skills"]:
-                                    st.write(f"✗ {skill}")
+                for skill in match_result["missing_skills"]:
+                    st.write(f"✗ {skill}")
 
-                                st.write("### Experience Match")
+                st.write("### Experience Match")
 
-                                st.write(match_result["experience_match"])
+                st.write(match_result["experience_match"])
 
-                                st.write("### Education Match")
+                st.write("### Education Match")
 
-                                st.write(match_result["education_match"])
+                st.write(match_result["education_match"])
 
-                                st.write("### Strengths")
+                st.write("### Strengths")
 
-                                for strength in match_result["strengths"]:
-                                    st.write(f"• {strength}")
+                for strength in match_result["strengths"]:
+                    st.write(f"• {strength}")
 
-                                st.write("### Weaknesses")
+                st.write("### Weaknesses")
 
-                                for weakness in match_result["weaknesses"]:
-                                    st.write(f"• {weakness}")
+                for weakness in match_result["weaknesses"]:
+                    st.write(f"• {weakness}")
 
-                                st.write("### Explanation")
+                st.write("### Explanation")
 
-                                st.write(match_result["explanation"])
+                st.write(match_result["explanation"])
 
 
-                    
-                    #----------------------#
-                    # 11. Display Resume Information
-                    #----------------------#
-                    
-                    st.success("Resume uploaded and information stored successfully.")
-                    st.subheader("Cleaned Resume Text.")
-                    st.text_area("Resume Content", cleaned_text, height=400)
-                    st.write(f"Candidate ID: {candidate.id}")
-                    st.write(f"Resume ID: {resume.id}")
+        except Exception as e:
+
+            st.error(f"Matching Error: {str(e)}")
+
+
+
+#----------------------#
+# 11. Display Resume Information
+#----------------------#
+        
+st.subheader("Cleaned Resume Text.")
+st.text_area("Resume Content", st.session_state.cleaned_text, height=400)
+st.write(f"Candidate ID: {st.session_state.candidate_id}")
+st.write(f"Resume ID: {st.session_state.resume_id}")
