@@ -29,6 +29,26 @@ candidate_phone = st.text_input("Candidate Phone")
 
 uploaded_file = st.file_uploader("Upload Resume", type=["pdf", "docx"])
 
+
+# Initialize Streamlit session state
+
+if "cleaned_text" not in st.session_state:
+    st.session_state.cleaned_text = None
+
+if "resume_text" not in st.session_state:
+    st.session_state.resume_text = None
+
+if "candidate_id" not in st.session_state:
+    st.session_state.candidate_id = None
+
+if "resume_id" not in st.session_state:
+    st.session_state.resume_id = None
+
+if "resume_analysis" not in st.session_state:
+    st.session_state.resume_analysis = None
+
+
+
 if st.button("Upload Resume"):
 
     if not candidate_name:
@@ -61,6 +81,11 @@ if st.button("Upload Resume"):
 
                     cleaned_text = clean_resume_text(resume_text)
 
+                    # store resume data in session state
+
+                    st.session_state.resume_text = resume_text
+                    st.session_state.cleaned_text = cleaned_text
+
                     #----------------------#
                     # 3. Create Database Session
                     #----------------------#
@@ -92,8 +117,12 @@ if st.button("Upload Resume"):
                     #----------------------#
 
                     candidate_id = candidate.id
-
                     resume_id = resume.id
+
+                    # store IDs in session state
+
+                    st.session_state.candidate_id = candidate_id
+                    st.session_state.resume_id = resume_id
 
                     #----------------------#
                     # 7. Close Database
@@ -107,32 +136,60 @@ if st.button("Upload Resume"):
 
                     resume_analysis = analyze_resume(resume_text)
 
-                    st.subheader("AI Resume Analysis")
-                    st.write(resume_analysis)
+                    # store LLM analysis in session state
 
-                    #----------------------#
-                    # 9. Job Description
-                    #----------------------#
+                    st.session_state.resume_analysis = resume_analysis
 
-                    st.subheader("Job Description")
+                    st.success("Resume uploaded and information stored successfully.")
 
-                    job_description = st.text_area("Paste the job description here:",
-                    height = 200
-                    )
+        
+        except Exception as e:
+            
+            st.error(f"An Error Occurred:{str(e)}")
 
-                    #----------------------#
-                    # 10. Resume Job Matching
-                    #----------------------#
 
-                    if st.button("Match Resume with Job"):
+# Display AI Resume Ananlysis outside Upload Button
 
-                        if not job_description.strip():
+if st.session_state.resume_analysis:
+    
+    st.subheader("AI Resume Analysis")
 
-                            st.warning("Please enter a job description.")
+    st.write(st.session_state.resume_analysis)
 
-                        else: 
+#----------------------#
+# 9. Job Description
+#----------------------#
 
-                            match_result = match_resume_with_job(
+if st.session_state.cleaned_text:
+    
+    st.subheader("Job Description")
+
+    job_description = st.text_area("Paste the job description here:", height = 200)
+
+
+#----------------------#
+# 10. Resume Job Matching
+#----------------------#
+
+if st.button("Match Resume with Job"):
+    
+    if not job_description.strip():
+
+        st.warning("Please enter a job description.")
+
+    else:
+
+        try:
+
+            #-------------------#
+            # Match Resume with Job
+            #-------------------#
+
+            with st.spinner(
+                "Matching resume with job..."
+            ):
+            
+                match_result = match_resume_with_job(
                                 cleaned_text,
                                 job_description
                             )
@@ -172,8 +229,6 @@ if st.button("Upload Resume"):
 
                                 st.write("### Strengths")
 
-                                st.write("### Strengths")
-
                                 for strength in match_result["strengths"]:
                                     st.write(f"• {strength}")
 
@@ -197,6 +252,3 @@ if st.button("Upload Resume"):
                     st.text_area("Resume Content", cleaned_text, height=400)
                     st.write(f"Candidate ID: {candidate.id}")
                     st.write(f"Resume ID: {resume.id}")
-
-        except Exception as e:
-                st.error(f"An Error Occurred:{str(e)}")
