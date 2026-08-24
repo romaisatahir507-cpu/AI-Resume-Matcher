@@ -1,6 +1,4 @@
 import os
-import shutil
-
 import streamlit as st
 
 from database.db import SessionLocal
@@ -87,60 +85,78 @@ if st.button("Upload Resume"):
                     st.session_state.cleaned_text = cleaned_text
 
                     #----------------------#
-                    # 3. Create Database Session
+                    # 3. Analyze Resume with LLM
                     #----------------------#
 
-                    db = SessionLocal()
+                    resume_analysis = analyze_resume(cleaned_text)
 
-                    #----------------------#
-                    # 4. Create Candidate
-                    #----------------------#
+                    if not resume_analysis:
+                        st.error("Could not analyze resume using AI.")
 
-                    candidate = Candidate(name=candidate_name, email=candidate_email, phone=candidate_phone)
+                    else:
+                        # Store LLM analysis is session state
 
-                    db.add(candidate)
-                    db.commit()
-                    db.refresh(candidate)
+                        st.session_state.resume_analysis = resume_analysis
 
-                    #----------------------#
-                    # 5. Create Resume Record
-                    #----------------------#
+                        #----------------------#
+                        # 4. Create Database Session
+                        #----------------------#
 
-                    resume = Resume(candidate_id=candidate.id, filename= uploaded_file.name, file_path=file_path, 
-                                    raw_text=cleaned_text)
-                    db.add(resume)
-                    db.commit()
-                    db.refresh(resume)
+                        db = SessionLocal()
 
-                    #----------------------#
-                    # 6. Store IDs
-                    #----------------------#
+                        #----------------------#
+                        # 5. Create Candidate 
+                        #----------------------#
 
-                    candidate_id = candidate.id
-                    resume_id = resume.id
+                        candidate = Candidate(name=candidate_name, email=candidate_email, phone=candidate_phone)
 
-                    # store IDs in session state
+                        db.add(candidate)
+                        db.commit()
+                        db.refresh(candidate)
 
-                    st.session_state.candidate_id = candidate_id
-                    st.session_state.resume_id = resume_id
 
-                    #----------------------#
-                    # 7. Close Database
-                    #----------------------#
+                        #----------------------#
+                        # 6. Create Resume Record
+                        #----------------------#
 
-                    db.close()
+                        resume = Resume(
+                            candidate_id = candidate.id,
+                            filename = uploaded_file.name,
+                            file_path = file_path,
+                            raw_text = cleaned_text,
+                            ai_analysis = resume_analysis
+                        )
+                    
+                        db.add(resume)
+                        db.commit()
+                        db.refresh(resume)
 
-                    #----------------------#
-                    # 8. Analyze Resume with LLM
-                    #----------------------#
 
-                    resume_analysis = analyze_resume(resume_text)
+                        #---------------------#
+                        # 7. Store IDs
+                        #---------------------#
 
-                    # store LLM analysis in session state
 
-                    st.session_state.resume_analysis = resume_analysis
+                        candidate_id = candidate.id
+                        resume_id = resume.id
 
-                    st.success("Resume uploaded and information stored successfully.")
+                        # store IDs in session state
+ 
+                        st.session_state.candidate_id = candidate_id
+                        st.session_state.resume_id = resume_id
+
+                        #----------------------#
+                        # 8. Close Database
+                        #----------------------#
+
+                        db.close()
+
+                        #-----------------------#
+                        # 9. Success Message
+                        #-----------------------#
+
+
+                        st.success("Resume uploaded and information stored successfully.")
 
         
         except Exception as e:
@@ -148,17 +164,19 @@ if st.button("Upload Resume"):
             st.error(f"An Error Occurred:{str(e)}")
 
 
-# Display AI Resume Ananlysis outside Upload Button
+# 10. Display AI Resume Analysis outside Upload Button
 
 if st.session_state.resume_analysis:
     
     st.subheader("AI Resume Analysis")
 
-    st.write(st.session_state.resume_analysis)
+    st.markdown(st.session_state.resume_analysis)
 
 #----------------------#
-# 9. Job Description
+# 11. Job Description
 #----------------------#
+
+job_description = ""
 
 if st.session_state.cleaned_text:
     
@@ -168,7 +186,7 @@ if st.session_state.cleaned_text:
 
 
 #----------------------#
-# 10. Resume Job Matching
+# 12. Resume Job Matching
 #----------------------#
 
 if st.button("Match Resume with Job"):
@@ -185,18 +203,16 @@ if st.button("Match Resume with Job"):
             # Match Resume with Job
             #-------------------#
 
-            with st.spinner(
-                "Matching resume with job..."
-            ):
+            with st.spinner("Matching resume with job..."):
             
                 match_result = match_resume_with_job(
                                 st.session_state.cleaned_text,
                                 job_description
-                            )
+                )
 
-                            #---------------#
-                            # 10.1 Display Match Result
-                            #---------------#
+            #---------------#
+            # 10.1 Display Match Result
+            #---------------#
 
             if "error" in match_result:
                 st.error(match_result["error"])
@@ -209,12 +225,12 @@ if st.button("Match Resume with Job"):
                     f"**Recommendation:**"
                     f"{match_result['recommendation']}"
                 )
-                st.write("###Matching Skills")
+                st.write("### Matching Skills")
 
                 for skill in match_result["matching_skills"]:
                     st.write(f"✓ {skill}")
 
-                st.write("###Missing Skills")
+                st.write("### Missing Skills")
 
                 for skill in match_result["missing_skills"]:
                     st.write(f"✗ {skill}")
@@ -249,10 +265,12 @@ if st.button("Match Resume with Job"):
 
 
 #----------------------#
-# 11. Display Resume Information
+# 13. Display Resume Information
 #----------------------#
-        
-st.subheader("Cleaned Resume Text.")
-st.text_area("Resume Content", st.session_state.cleaned_text, height=400)
-st.write(f"Candidate ID: {st.session_state.candidate_id}")
-st.write(f"Resume ID: {st.session_state.resume_id}")
+
+if st.session_state.cleaned_text:
+
+    st.subheader("Cleaned Resume Text.")
+    st.text_area("Resume Content", st.session_state.cleaned_text, height=400)
+    st.write(f"Candidate ID: {st.session_state.candidate_id}")
+    st.write(f"Resume ID: {st.session_state.resume_id}")

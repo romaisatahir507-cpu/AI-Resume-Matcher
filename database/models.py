@@ -22,6 +22,10 @@ class Resume(Base):
     filename = Column(String(255), nullable=False)
     file_path = Column(String(500), nullable=False)
     raw_text = Column(Text, nullable=False)
+
+    ai_analysis = Column(Text, nullable=True)
+
+
     created_at = Column(DateTime, default = datetime.utcnow)
     candidate = relationship("Candidate", back_populates="resumes")
 
