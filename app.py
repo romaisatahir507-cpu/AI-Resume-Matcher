@@ -6,6 +6,7 @@ from database.models import Candidate, Resume
 from services.resume_parser import extract_resume_text
 from services.text_cleaner import clean_resume_text
 from services.llm import analyze_resume, match_resume_with_job
+from services.tfidf_matcher import calculate_tfidf_match
 
 UPLOAD_DIR = "uploads"
 
@@ -198,6 +199,26 @@ if st.button("Match Resume with Job"):
     else:
 
         try:
+
+            #-------------------#
+            # Calculate TF-IDF Match Score
+            #-------------------#
+
+
+            tfidf_score = calculate_tfidf_match(
+                st.session_state.cleaned_text,
+                job_description
+            )
+
+            # Display TF-IDf Score
+
+            st.subheader("TF-IDF Match Score")
+
+            st.metric(
+                "TF-IDF Match",
+                f"{tfidf_score}%"
+            )
+
 
             #-------------------#
             # Match Resume with Job
