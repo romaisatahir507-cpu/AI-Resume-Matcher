@@ -7,6 +7,8 @@ from services.resume_parser import extract_resume_text
 from services.text_cleaner import clean_resume_text
 from services.llm import analyze_resume, match_resume_with_job
 from services.tfidf_matcher import calculate_tfidf_match
+from services.embeddings import calculate_semantic_similarity
+
 
 UPLOAD_DIR = "uploads"
 
@@ -218,6 +220,22 @@ if st.button("Match Resume with Job"):
                 "TF-IDF Match",
                 f"{tfidf_score}%"
             )
+
+
+            #------------------#
+            # Semantic Matching
+            #------------------#
+
+            semantic_score = calculate_semantic_similarity(
+                st.session_state.cleaned_text,
+                job_description
+            )
+
+            st.metric(
+                "Semantic Match", 
+                f"{semantic_score}%"
+            )
+
 
 
             #-------------------#
