@@ -8,6 +8,7 @@ from services.text_cleaner import clean_resume_text
 from services.llm import analyze_resume, match_resume_with_job
 from services.tfidf_matcher import calculate_tfidf_match
 from services.embeddings import calculate_semantic_similarity
+from services.scoring_engine import calculate_final_score, get_recommendation
 
 
 UPLOAD_DIR = "uploads"
@@ -53,10 +54,15 @@ if "resume_analysis" not in st.session_state:
 if st.button("Upload Resume"):
 
     if not candidate_name:
+
         st.error("Please enter the candidate name.")
+
     elif uploaded_file is None:
+
             st.error("Please upload a resume file.")
+
     else:
+
         try:
                 #----------------------#
                 # 1. Save Uploaded File 
@@ -72,8 +78,11 @@ if st.button("Upload Resume"):
                 #----------------------#
 
                 resume_text = extract_resume_text(file_path)
+
                 if not resume_text:
+
                     st.error("Could not extract text from the uploaded resume.")
+
                 else:
 
                     #----------------------#
@@ -175,6 +184,22 @@ if st.session_state.resume_analysis:
 
     st.markdown(st.session_state.resume_analysis)
 
+
+#---------------------#
+# Session State Initialization
+#---------------------#
+
+if "tfidf_score" not in st.session_state:
+    st.session_state.tfidf_score = None
+
+if "semantic_score" not in st.session_state:
+    st.session_state.semantic_score = None
+
+if "final_score" not in st.session_state:
+    st.session_state.final_score = None
+
+
+
 #----------------------#
 # 11. Job Description
 #----------------------#
@@ -198,72 +223,102 @@ if st.button("Match Resume with Job"):
 
         st.warning("Please enter a job description.")
 
+    elif not st.session_state.cleaned_text:
+
+        st.warning("Please upload a resume first.")
+
     else:
 
+        #-------------------#
+        # Calculate TF-IDF Match Score
+        #-------------------#
+        
+        st.session_state.tfidf_score = calculate_tfidf_match(
+            st.session_state.cleaned_text,
+            job_description
+        )
+
+
+        #------------------#
+        # Semantic Matching
+        #------------------#
+
+        st.session_state.semantic_score = calculate_semantic_similarity(
+            st.session_state.cleaned_text,
+            job_description
+        )
+
+        
+        #------------------#
+        # Candidate Final Scoring
+        #------------------#
+
+        st.session_state.final_score = calculate_final_score(
+            st.session_state.tfidf_score,
+            st.session_state.semantic_score
+        )
+
+        # Recommendation
+
+        recommendation = get_recommendation(st.session_state.final_score)
+
+
+        #------------------#
+        # Display Results
+        #------------------#
+
+        st.subheader("Resume Matching Results")
+
+        st.metric(
+            "TF-IDF Match",
+            f"{st.session_state.tfidf_score}%"
+        )
+
+        st.metric(
+            "Semantic Match", 
+            f"{st.session_state.semantic_score}%"
+        )
+
+        st.metric(
+            "Final Candidate Score",
+            f"{st.session_state.final_score}%"
+        )
+
+        st.write(
+            f"**Recommendation:** {recommendation}"
+        )
+
         try:
-
-            #-------------------#
-            # Calculate TF-IDF Match Score
-            #-------------------#
-
-
-            tfidf_score = calculate_tfidf_match(
-                st.session_state.cleaned_text,
-                job_description
-            )
-
-            # Display TF-IDf Score
-
-            st.subheader("TF-IDF Match Score")
-
-            st.metric(
-                "TF-IDF Match",
-                f"{tfidf_score}%"
-            )
-
-
-            #------------------#
-            # Semantic Matching
-            #------------------#
-
-            semantic_score = calculate_semantic_similarity(
-                st.session_state.cleaned_text,
-                job_description
-            )
-
-            st.metric(
-                "Semantic Match", 
-                f"{semantic_score}%"
-            )
-
-
-
+            
             #-------------------#
             # Match Resume with Job
             #-------------------#
 
             with st.spinner("Matching resume with job..."):
             
-                match_result = match_resume_with_job(
-                                st.session_state.cleaned_text,
-                                job_description
-                )
+                match_result = match_resume_with_job(st.session_state.cleaned_text, job_description)
 
             #---------------#
             # 10.1 Display Match Result
             #---------------#
 
             if "error" in match_result:
+
                 st.error(match_result["error"])
+
                 st.write(match_result["raw_response"])
 
             else:
+
                 st.subheader("AI Resume Match Result")
-                st.metric("Match Score", f"{match_result['match_score']}%")
+
+                st.metric("LLM Match Score", f"{match_result['match_score']}%")
+
                 st.write(
                     f"**Recommendation:**"
                     f"{match_result['recommendation']}"
                 )
+
                 st.write("### Matching Skills")
 
                 for skill in match_result["matching_skills"]:
