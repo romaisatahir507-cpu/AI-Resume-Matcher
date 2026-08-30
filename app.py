@@ -3,12 +3,14 @@ import streamlit as st
 
 from database.db import SessionLocal
 from database.models import Candidate, Resume
+
 from services.resume_parser import extract_resume_text
 from services.text_cleaner import clean_resume_text
 from services.llm import analyze_resume, match_resume_with_job
 from services.tfidf_matcher import calculate_tfidf_match
 from services.embeddings import calculate_semantic_similarity
 from services.scoring_engine import calculate_final_score, get_recommendation
+from services.ml_matcher import predict_ml_match
 
 
 UPLOAD_DIR = "uploads"
@@ -198,6 +200,9 @@ if "semantic_score" not in st.session_state:
 if "final_score" not in st.session_state:
     st.session_state.final_score = None
 
+if "ml_score" not in st.session_state:
+    st.session_state.ml_score = None
+
 
 
 #----------------------#
@@ -229,86 +234,184 @@ if st.button("Match Resume with Job"):
 
     else:
 
-        #-------------------#
-        # Calculate TF-IDF Match Score
-        #-------------------#
-        
-        st.session_state.tfidf_score = calculate_tfidf_match(
-            st.session_state.cleaned_text,
-            job_description
-        )
-
-
-        #------------------#
-        # Semantic Matching
-        #------------------#
-
-        st.session_state.semantic_score = calculate_semantic_similarity(
-            st.session_state.cleaned_text,
-            job_description
-        )
-
-        
-        #------------------#
-        # Candidate Final Scoring
-        #------------------#
-
-        st.session_state.final_score = calculate_final_score(
-            st.session_state.tfidf_score,
-            st.session_state.semantic_score
-        )
-
-        # Recommendation
-
-        recommendation = get_recommendation(st.session_state.final_score)
-
-
-        #------------------#
-        # Display Results
-        #------------------#
-
-        st.subheader("Resume Matching Results")
-
-        st.metric(
-            "TF-IDF Match",
-            f"{st.session_state.tfidf_score}%"
-        )
-
-        st.metric(
-            "Semantic Match", 
-            f"{st.session_state.semantic_score}%"
-        )
-
-        st.metric(
-            "Final Candidate Score",
-            f"{st.session_state.final_score}%"
-        )
-
-        st.write(
-            f"**Recommendation:** {recommendation}"
-        )
-
         try:
-            
+
             #-------------------#
-            # Match Resume with Job
+            # Calculate TF-IDF Match Score
             #-------------------#
+        
+            st.session_state.tfidf_score = calculate_tfidf_match(
+                st.session_state.cleaned_text,
+                job_description
+            )
+
+
+            #------------------#
+            # Semantic Matching
+            #------------------#
+
+            st.session_state.semantic_score = calculate_semantic_similarity(
+                st.session_state.cleaned_text,
+                job_description
+            )
+
+            #------------------#
+            # LLM Resume Matching
+            #------------------#
 
             with st.spinner("Matching resume with job..."):
-            
+                
                 match_result = match_resume_with_job(st.session_state.cleaned_text, job_description)
-
-            #---------------#
-            # 10.1 Display Match Result
-            #---------------#
 
             if "error" in match_result:
 
                 st.error(match_result["error"])
-
                 st.write(match_result["raw_response"])
 
             else:
+
+                #-----------------#
+                # Extract ML Features
+                #-----------------#
+
+                matching_skills = match_result.get("matching_skills", [])
+
+                missing_skills = match_result.get("missing_skills", [])
+
+                # Make sure both are lists
+                if not isinstance(matching_skills, list):
+                    matching_skills = []
+
+                if not isinstance(missing_skills, list):
+                    missing_skills = []
+
+
+                # Total Skills
+                total_skills = (len(matching_skills) + len(missing_skills))
+
+
+                # Skills Match
+
+                if total_skills > 0:
+                    skills_match = (len(matching_skills) / total_skills) * 100
+
+                else:
+                    skills_match = 0
+
+                
+                # Missing Skills Ratio
+
+                if total_skills > 0:
+                    missing_skills_ratio = (len(missing_skills) / total_skills) * 100
+
+                else:
+                    missing_skills_ratio = 0
+
+                
+                #------------------#
+                # Experience Match
+                #------------------#
+
+                experience_text = str(match_result.get("experience_match", "")).lower()
+
+                if any(word in experience_text for word in ["strong", "excellent", "match", "yes"]):
+                    experience_match = 100
+
+                elif any(word in experience_text for word in ["partial", "somewhat", "moderate"]):
+                    experience_match = 50
+
+                else:
+                    experience_match = 0
+
+                
+
+                #-------------------#
+                # Education Match
+                #-------------------#
+
+                education_text = str(match_result.get("education_match", "")).lower()
+
+                if any(word in education_text for word in ["strong", "excellent", "match", "yes"]):
+                    education_match = 100
+
+                elif any(word in education_text for word in ["partial", "somewhat","moderate"]):
+                    education_match = 50
+
+                else:
+                    education_match = 0
+
+
+                #--------------------#
+                # Existing Candidate Score
+                #--------------------#
+
+                st.session_state.final_score = calculate_final_score(
+                    st.session_state.tfidf_score,
+                    st.session_state.semantic_score
+                )
+
+                # Recommendation
+
+                recommendation = get_recommendation(st.session_state.final_score)
+
+
+
+                #---------------------#
+                # ML Prediction 
+                #---------------------#
+
+                st.session_state.ml_score = predict_ml_match(
+                    st.session_state.tfidf_score,
+                    st.session_state.semantic_score,
+                    skills_match,
+                    experience_match,
+                    education_match,
+                    missing_skills_ratio
+                )
+
+
+                #------------------#
+                # Display Traditional Scores
+                #------------------#
+
+                st.subheader("Resume Matching Results")
+
+                st.metric(
+                    "TF-IDF Match",
+                    f"{st.session_state.tfidf_score}%"
+                )
+
+                st.metric(
+                    "Semantic Match", 
+                    f"{st.session_state.semantic_score}%"
+                )
+
+                st.metric(
+                    "Final Candidate Score",
+                    f"{st.session_state.final_score}%"
+                )
+
+                st.write(
+                    f"**Recommendation:** {recommendation}"
+                )
+
+
+                #--------------------#
+                # Display ML Scores
+                #--------------------#
+
+                st.subheader("Machine Learning Prediction")
+
+
+                st.metric(
+                    "ML Match Score",
+                    f"{st.session_state.ml_score:.2f}%"
+                )
+
+
+                #--------------------#
+                # Display LLM Match Result
+                #--------------------#
 
                 st.subheader("AI Resume Match Result")
 
