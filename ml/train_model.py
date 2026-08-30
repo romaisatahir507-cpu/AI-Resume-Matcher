@@ -3,7 +3,7 @@ import joblib
 
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.model_selection import train_test_split
-from sklearn.metrics import mean_absolute_error, root_mean_squared_error, r2_score
+from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 
 
 #--------------------------
@@ -81,7 +81,7 @@ predictions = model.predict(X_test)
 
 mae = mean_absolute_error(y_test, predictions)
 
-rmse = root_mean_squared_error(
+mse = mean_squared_error(
     y_test,
     predictions
 ) ** 0.5
@@ -95,12 +95,40 @@ r2 = r2_score(
 print("\nModel Evaluation:")
 print("--------------------------")
 print(f"MAE : {mae: .2f}")
-print(f"RMSE : {rmse: .2f}")
+print(f"MSE : {mse: .2f}")
 print(f"R Square : {r2: .2f}")
 
 
+# ---------------------------------------
+# 8. Feature Importance
+# ---------------------------------------
+
+print("\nFeature Importance:")
+print("--------------------------")
+
+importance = model.feature_importances_
+
+feature_importance = pd.DataFrame({
+    "Feature": features,
+    "Importance": importance
+})
+
+feature_importance = feature_importance.sort_values(
+    by="Importance",
+    ascending=False
+)
+
+for _, row in feature_importance.iterrows():
+
+    print(
+        f"{row['Feature']:<25} "
+        f"{row['Importance']:.4f}"
+    )
+
+
+
 #----------------------------
-# 8. Train Final Model
+# 9. Train Final Model
 #----------------------------
 
 final_model = RandomForestRegressor(
@@ -112,7 +140,7 @@ final_model.fit(X, y)
 
 
 #----------------------------
-# 9. Save Model
+# 10. Save Final Model
 #----------------------------
 
 joblib.dump(
