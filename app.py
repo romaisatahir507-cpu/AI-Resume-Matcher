@@ -12,6 +12,7 @@ from services.embeddings import calculate_semantic_similarity
 from services.scoring_engine import calculate_final_score, get_recommendation
 from services.ml_matcher import predict_ml_match
 from services.chroma_service import add_resume_to_chroma, search_resumes
+from services.rag_service import retrieve_resume_context
 
 
 UPLOAD_DIR = "uploads"
@@ -216,6 +217,9 @@ if "final_score" not in st.session_state:
 if "ml_score" not in st.session_state:
     st.session_state.ml_score = None
 
+if "rag_context" not in st.session_state:
+    st.session_state.rag_context = ""
+
 
 
 #----------------------#
@@ -248,6 +252,18 @@ if st.button("Match Resume with Job"):
     else:
 
         try:
+
+            #---------------------
+            # RAG Retrieval 
+            #---------------------
+
+            rag_context = retrieve_resume_context(
+                job_description,
+                n_results = 1
+            )
+
+            st.session_state.rag_context = rag_context
+
 
             #-------------------#
             # Calculate TF-IDF Match Score
@@ -407,6 +423,18 @@ if st.button("Match Resume with Job"):
                 st.write(
                     f"**Recommendation:** {recommendation}"
                 )
+
+
+                #-----------------------
+                # RAG Retrieved Context
+                #-----------------------
+
+                if st.session_state.rag_context:
+
+                    with st.expander("RAG Retrieved Context"):
+
+                        st.write(st.session_state.rag_context)
+
 
 
                 #--------------------#
