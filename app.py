@@ -11,6 +11,7 @@ from services.tfidf_matcher import calculate_tfidf_match
 from services.embeddings import calculate_semantic_similarity
 from services.scoring_engine import calculate_final_score, get_recommendation
 from services.ml_matcher import predict_ml_match
+from services.chroma_service import add_resume_to_chroma, search_resumes
 
 
 UPLOAD_DIR = "uploads"
@@ -144,6 +145,18 @@ if st.button("Upload Resume"):
                         db.add(resume)
                         db.commit()
                         db.refresh(resume)
+
+                        add_resume_to_chroma(
+                            resume_id=resume.id,
+                            resume_text=cleaned_text
+                        )
+
+                        results = search_resumes(
+                            "Python machine learning NLP developer",
+                             n_results=3
+                        )
+
+                        st.write(results)
 
 
                         #---------------------#
