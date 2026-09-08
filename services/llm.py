@@ -171,3 +171,60 @@ def match_resume_with_job(resume_text: str, job_description: str) -> str:
             "error": "Could not parse LLM response.",
             "raw_response": response
         }
+
+
+def analyze_resume_with_rag(
+    resume_text: str,
+    job_description: str,
+    rag_context: str
+) -> str:
+    
+    prompt =  f"""
+    You are an AI resume matching assistant.
+
+    Analyze the candidate's resume against the given job description.
+
+    Use the retrieved RAG context as supporting information.
+    Do not invent skills, experience, education, or qualifications
+    that are not present in the resume or retrieved context.
+
+    Candidate Resume:
+    {resume_text}
+
+    Job Description:
+    {job_description}
+
+    Retrieved RAG Context:
+    {rag_context}
+
+    Provide a clear analysis containing:
+
+    1. Overall Match
+    2. Matching Skills
+    3. Missing Skills
+    4. Experience Match
+    5. Education Match
+    6. Strengths
+    7. Weaknesses
+    8. Final Recommendation
+    9. Explanation
+
+    Keep the analysis concise and relevant to the job description.
+    """
+
+    response = client.chat.completions.create(
+        model = MODEL_NAME,
+        messages = [
+            {
+                "role": "system",
+                "content": "You are anexpert AI recruitment assistant."
+            },
+            {
+                "role": "user",
+                "content": prompt
+            }
+        ],
+        temperature = 0.2
+    )
+
+    return response.choices[0].message.content

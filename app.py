@@ -1,4 +1,5 @@
 import os
+
 import streamlit as st
 
 from database.db import SessionLocal
@@ -6,12 +7,16 @@ from database.models import Candidate, Resume
 
 from services.resume_parser import extract_resume_text
 from services.text_cleaner import clean_resume_text
-from services.llm import analyze_resume, match_resume_with_job
+from services.llm import (
+    analyze_resume, 
+    match_resume_with_job, 
+    analyze_resume_with_rag
+)
 from services.tfidf_matcher import calculate_tfidf_match
 from services.embeddings import calculate_semantic_similarity
 from services.scoring_engine import calculate_final_score, get_recommendation
 from services.ml_matcher import predict_ml_match
-from services.chroma_service import add_resume_to_chroma, search_resumes
+from services.chroma_service import add_resume_to_chroma
 from services.rag_service import retrieve_resume_context
 
 
@@ -53,6 +58,15 @@ if "resume_id" not in st.session_state:
 if "resume_analysis" not in st.session_state:
     st.session_state.resume_analysis = None
 
+if "job_match_analysis" not in st.session_state:
+    st.session_state.job_match_analysis = None
+
+
+
+#--------------------------
+# Upload Resume Button
+#--------------------------
+
 
 
 if st.button("Upload Resume"):
@@ -69,7 +83,7 @@ if st.button("Upload Resume"):
 
         try:
                 #----------------------#
-                # 1. Save Uploaded File 
+                # Save Uploaded File 
                 #----------------------#
 
                 file_path = os.path.join(UPLOAD_DIR, uploaded_file.name)
@@ -78,7 +92,7 @@ if st.button("Upload Resume"):
 
 
                 #----------------------#
-                # 2. Extract Resume Text
+                # Extract Resume Text
                 #----------------------#
 
                 resume_text = extract_resume_text(file_path)
@@ -90,7 +104,7 @@ if st.button("Upload Resume"):
                 else:
 
                     #----------------------#
-                    # 2.1 Clean Resume Text
+                    # Clean Resume Text
                     #----------------------#
 
                     cleaned_text = clean_resume_text(resume_text)
@@ -101,7 +115,7 @@ if st.button("Upload Resume"):
                     st.session_state.cleaned_text = cleaned_text
 
                     #----------------------#
-                    # 3. Analyze Resume with LLM
+                    # Analyze Resume with LLM
                     #----------------------#
 
                     resume_analysis = analyze_resume(cleaned_text)
@@ -115,13 +129,13 @@ if st.button("Upload Resume"):
                         st.session_state.resume_analysis = resume_analysis
 
                         #----------------------#
-                        # 4. Create Database Session
+                        # Create Database Session
                         #----------------------#
 
                         db = SessionLocal()
 
                         #----------------------#
-                        # 5. Create Candidate 
+                        # Create Candidate 
                         #----------------------#
 
                         candidate = Candidate(name=candidate_name, email=candidate_email, phone=candidate_phone)
@@ -132,7 +146,7 @@ if st.button("Upload Resume"):
 
 
                         #----------------------#
-                        # 6. Create Resume Record
+                        # Create Resume Record
                         #----------------------#
 
                         resume = Resume(
@@ -151,30 +165,17 @@ if st.button("Upload Resume"):
                             resume_id=resume.id,
                             resume_text=cleaned_text
                         )
-
-                        results = search_resumes(
-                            "Python machine learning NLP developer",
-                             n_results=3
-                        )
-
-                        st.write(results)
-
+                        
 
                         #---------------------#
-                        # 7. Store IDs
+                        # Store IDs
                         #---------------------#
-
-
-                        candidate_id = candidate.id
-                        resume_id = resume.id
-
-                        # store IDs in session state
  
-                        st.session_state.candidate_id = candidate_id
-                        st.session_state.resume_id = resume_id
+                        st.session_state.candidate_id = candidate.id
+                        st.session_state.resume_id = resume.id
 
                         #----------------------#
-                        # 8. Close Database
+                        # Close Database
                         #----------------------#
 
                         db.close()
@@ -192,13 +193,27 @@ if st.button("Upload Resume"):
             st.error(f"An Error Occurred:{str(e)}")
 
 
-# 10. Display AI Resume Analysis outside Upload Button
+#--------------------------------
+# Display AI Resume Overview outside Upload Button
+#--------------------------------
 
 if st.session_state.resume_analysis:
     
-    st.subheader("AI Resume Analysis")
+    st.subheader("AI Resume Overview")
 
     st.markdown(st.session_state.resume_analysis)
+
+
+#---------------------------
+# Display AI Job Match Analysis
+#--------------------------
+
+if st.session_state.job_match_analysis:
+
+    st.subheader("AI Job Match Analysis")
+
+    st.markdown(st.session_state.job_match_analysis)
+
 
 
 #---------------------#
@@ -223,7 +238,7 @@ if "rag_context" not in st.session_state:
 
 
 #----------------------#
-# 11. Job Description
+# Job Description
 #----------------------#
 
 job_description = ""
@@ -236,7 +251,7 @@ if st.session_state.cleaned_text:
 
 
 #----------------------#
-# 12. Resume Job Matching
+# Resume Job Matching
 #----------------------#
 
 if st.button("Match Resume with Job"):
@@ -263,6 +278,19 @@ if st.button("Match Resume with Job"):
             )
 
             st.session_state.rag_context = rag_context
+
+
+            #---------------------
+            # Groq RAG Analysis
+            #---------------------
+
+            rag_analysis = analyze_resume_with_rag(
+                st.session_state.cleaned_text,
+                job_description,
+                rag_context
+            )
+
+            st.session_state.job_match_analysis = rag_analysis
 
 
             #-------------------#
@@ -503,7 +531,7 @@ if st.button("Match Resume with Job"):
 
 
 #----------------------#
-# 13. Display Resume Information
+# Display Resume Information
 #----------------------#
 
 if st.session_state.cleaned_text:
