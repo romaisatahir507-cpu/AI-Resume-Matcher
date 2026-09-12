@@ -12,6 +12,7 @@ from services.embeddings import calculate_semantic_similarity
 from services.llm import match_resume_with_job, analyze_resume_with_rag
 from services.ml_matcher import predict_ml_match
 from services.rag_service import retrieve_resume_context
+from services.scoring_engine import calculate_final_score, get_recommendation
 
 
 #------------------
@@ -36,10 +37,15 @@ class MatchResponse(BaseModel):
 
     tfidf_score: float
     semantic_score: float
+    final_score: float
+    recommendation: str
+
     ml_score: float
 
     rag_context: str
     rag_analysis: str
+
+    match_result: dict
 
 
 UPLOAD_DIR = "uploads"
@@ -360,14 +366,29 @@ def match_resume(request: MatchRequest):
         )
 
 
+        #----------------------
+        # Final Candidate Score
+        #----------------------
+
+        final_score = calculate_final_score(
+            float(tfidf_score),
+            float(semantic_score)
+        )
+
+        recommendation = get_recommendation(final_score)
+
+
         return {
-            "message": "Resume retrieved successfully",
+            "message": "Resume matched successfully",
             "resume_id": resume.id,
             "tfidf_score": float(tfidf_score),
             "semantic_score": float(semantic_score),
+            "final_score": float(final_score),
+            "recommendation": recommendation,
             "ml_score": float(ml_score),
             "rag_context": rag_context,
-             "rag_analysis": rag_analysis
+            "rag_analysis": rag_analysis,
+            "match_result": match_result
         }
 
     finally:
