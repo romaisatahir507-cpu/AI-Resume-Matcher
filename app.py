@@ -52,7 +52,7 @@ with st.sidebar:
             else:
                 st.error("FastAPI is not responding")
         
-        except requests.expectations.RequestException:
+        except requests.exceptions.RequestException:
             st.error("FastAPI is not running")
 
 
@@ -308,6 +308,101 @@ if st.button("Match Resume with Job"):
         except Exception as e:
 
             st.error(f"Matching Error: {str(e)}")
+
+
+
+#-----------------------
+# Candidate Ranking Dashboard
+#-----------------------
+
+
+st.header("Candidate Ranking Dashboard")
+
+ranking_job_description = st.text_area("Enter Job Description for Candidate Ranking", height = 200)
+
+if st.button("Rank Candidates"):
+
+    if not ranking_job_description.strip():
+
+        st.warning("Please enter a job description.")
+
+    else:
+
+        try:
+
+            db = SessionLocal()
+
+            resumes = db.query(Resume).order_by(Resume.id.desc()).limit(1).all()
+            if not resumes:
+
+                st.warning("No resumes found in database.")
+
+            else:
+
+                ranking_results = []
+
+                with st.spinner("Ranking candidates..."):
+
+                    for resume in resumes:
+
+                        try:
+
+                            api_result = match_resume(resume.id, ranking_job_description)
+
+                            candidate = (db.query(Candidate).filter(Candidate.id == resume.candidate_id).first())
+
+                            ranking_results.append({
+                                "Candidate": candidate.name if candidate else "Unkonown",
+                                "Resume ID": resume.id,
+                                "TF-IDF Score": api_result.get("tfidf_score", 0),
+                                "Semantic Score": api_result.get("semantic_score", 0),
+                                "Final Score": api_result.get("final_score", 0),
+                                "Recommendation": api_result.get("recommendation", "N/A")
+                            })
+
+                        except Exception as e:
+
+                            st.warning(f"Could not process Resume ID {resume.id}: {str(e)}")
+
+                db.close()
+
+                # Sort candidates by final score
+                ranking_results = sorted(
+                    ranking_results,
+                    key=lambda x: x["Final Score"],
+                    reverse=True
+                )
+
+                # Add ranking position
+
+                for rank, result in enumerate(ranking_results, start=1):
+                    result["Rank"] = rank
+
+                st.subheader("Candidate Rankings")
+
+                ranking_table = []
+
+                for result in ranking_results:
+
+                    ranking_table.append({
+                        "Rank": result["Rank"],
+                        "Candidate": result["Candidate"],
+                        "TF-IDF Score": result["TF-IDF Score"],
+                        "Semantic Score": result["Semantic Score"],
+                        "Final Score": result["Final Score"],
+                        "Recommendation": result["Recommendation"]
+                    })
+
+                st.dataframe(
+                    ranking_table,
+                    use_container_width=True,
+                    hide_index=True
+                )
+
+
+        except Exception as e:
+
+            st.error(f"Ranking Error: {str(e)}")
 
         
 
