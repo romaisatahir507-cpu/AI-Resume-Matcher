@@ -391,5 +391,16 @@ def match_resume(request: MatchRequest):
             "match_result": match_result
         }
 
+    
+    except Exception as e:
+
+        import traceback 
+        traceback.print_exc()
+
+        raise HTTPException(
+            status_code = 500,
+            detail = str(e)
+        )
+
     finally:
         db.close()

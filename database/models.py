@@ -27,5 +27,6 @@ class Resume(Base):
 
 
     created_at = Column(DateTime, default = datetime.utcnow)
+    resume_hash = Column(String(64), unique=True, index=True)
     candidate = relationship("Candidate", back_populates="resumes")
 

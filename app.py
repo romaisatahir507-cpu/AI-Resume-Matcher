@@ -1,5 +1,7 @@
 import os
 import requests
+import re
+import hashlib
 
 import streamlit as st
 
@@ -11,7 +13,8 @@ from services.text_cleaner import clean_resume_text
 from services.llm import (
     analyze_resume, 
     match_resume_with_job, 
-    analyze_resume_with_rag
+    analyze_resume_with_rag,
+    generate_llm_response
 )
 from services.tfidf_matcher import calculate_tfidf_match
 from services.embeddings import calculate_semantic_similarity
@@ -32,6 +35,21 @@ st.set_page_config(page_title = "AI Resume Matcher",
                    layout = "wide"
 
 )
+
+
+st.markdown("""
+<style>
+/* Hide Streamlit heading anchor/link icons */
+[data-testid="stHeaderActionElements"] {
+    display: none !important;
+}
+
+[data-testid="stHeaderActionElements"] svg {
+    display: none !important;
+}
+</style>
+""",unsafe_allow_html = True)
+
 
 
 #----------------------
@@ -88,6 +106,19 @@ if "job_match_analysis" not in st.session_state:
     st.session_state.job_match_analysis = None
 
 
+#-----------------------------
+# Hashing Function
+#-----------------------------
+
+
+def generate_resume_hash(resume_text):
+    normalized_text = " ".join(resume_text.lower().split())
+
+    return hashlib.sha256(
+        normalized_text.encode("utf-8")
+    ).hexdigest()
+
+
 
 #--------------------------
 # Upload Resume Button
@@ -140,6 +171,36 @@ if st.button("Upload Resume"):
                     st.session_state.resume_text = resume_text
                     st.session_state.cleaned_text = cleaned_text
 
+                    #------------------------------
+                    # Check for Duplicate Resume
+                    #------------------------------
+
+                    resume_hash = generate_resume_hash(cleaned_text)
+
+                    db = SessionLocal()
+
+                    existing_resume = (
+                        db.query(Resume).filter(Resume.resume_hash == resume_hash).first()
+                    )
+
+                    if existing_resume:
+
+                        existing_candidate = (
+                            db.query(Candidate).filter(Candidate.id == existing_resume.candidate_id).first()
+                        )
+
+                        candidate_name_existing = (existing_candidate.name if existing_candidate else "Unknown")
+
+                        db.close()
+
+                        st.warning(
+                            f"This resume already exists in the database. "
+                            f"Candidate: {candidate_name_existing}, "
+                            f"Resume ID: {existing_resume.id}"
+                        )
+
+                        st.stop()
+
                     #----------------------#
                     # Analyze Resume with LLM
                     #----------------------#
@@ -154,11 +215,6 @@ if st.button("Upload Resume"):
 
                         st.session_state.resume_analysis = resume_analysis
 
-                        #----------------------#
-                        # Create Database Session
-                        #----------------------#
-
-                        db = SessionLocal()
 
                         #----------------------#
                         # Create Candidate 
@@ -180,7 +236,8 @@ if st.button("Upload Resume"):
                             filename = uploaded_file.name,
                             file_path = file_path,
                             raw_text = cleaned_text,
-                            ai_analysis = resume_analysis
+                            ai_analysis = resume_analysis,
+                            resume_hash = resume_hash
                         )
                     
                         db.add(resume)
@@ -332,7 +389,9 @@ if st.button("Rank Candidates"):
 
             db = SessionLocal()
 
-            resumes = db.query(Resume).order_by(Resume.id.desc()).limit(1).all()
+            resumes = db.query(Resume).order_by(Resume.id.desc()).all()
+            st.write(f"Total resumes found: {len(resumes)}")
+
             if not resumes:
 
                 st.warning("No resumes found in database.")
@@ -404,7 +463,382 @@ if st.button("Rank Candidates"):
 
             st.error(f"Ranking Error: {str(e)}")
 
-        
+
+
+#------------------------
+# AI Recruiter Chatbot
+#------------------------
+
+st.header("AI Recruiter Chatbot")
+
+recruiter_question = st.text_input("Ask a question about the candidate")
+
+if st.button("Ask Recruiter AI"):
+
+    if not recruiter_question.strip():
+
+        st.warning("Please enter a question.")
+
+    elif not st.session_state.resume_id:
+
+        st.warning("Please upload a resume first.")
+
+    else:
+
+        try:
+
+            with st.spinner("AI Recruiter is thinking..."):
+
+                # Retrieve resume context from ChromaDB
+
+                recruiter_context = retrieve_resume_context(
+                    recruiter_question,
+                    n_results = 1
+                )
+
+                # Create recruiter prompt
+                recruiter_prompt = f"""
+
+                You are an AI recruiter assistant.
+
+                Answer the recruiter's question using ONLY the candidate information provided
+                in the retrieved resume context.
+
+                Do not invent information.
+                If the information is not available, say: 
+                "Not mentioned in the resume."
+
+                Candidate Resume Context:
+                --------------------------
+                {recruiter_context}
+                --------------------------
+
+                Recruiter question:
+                {recruiter_question}
+
+                Give a clear, concise, and professional answer.
+                """
+
+                # Generate answer using Groq
+                recruiter_answer = generate_llm_response(recruiter_prompt)
+
+                st.subheader("AI Recruiter Response")
+
+                st.write(recruiter_answer)
+
+
+        except Exception as e:
+
+            st.error(f"Recruiter Chatbot Error: {str(e)}")
+
+
+#------------------------
+# Candidate Comparison
+#------------------------
+
+
+if "comparison_results" not in st.session_state:
+    st.session_state.comparison_results = []
+
+st.header("Candidate Comparison")
+
+# Shared Job Description
+job_description_compare = st.text_area(
+    "Job Description",
+    height = 180,
+    placeholder = "Paste the job description here..."
+)
+
+# Get all candidates
+db = SessionLocal()
+
+try:
+
+    candidates = db.query(Candidate).all()
+
+    if len(candidates) < 2:
+
+        st.info("At least 2 candidates are required for comparison.")
+
+    else:
+
+        candidate_options = {
+            f"{candidate.name} (ID: {candidate.id})": candidate.id for candidate in candidates
+        }
+
+        selected_candidates = st.multiselect(
+            "Select candidates to compare",
+            options = list(candidate_options.keys()),
+            max_selections = 3
+        )
+
+        if len(selected_candidates) < 2:
+
+            st.info("Please select at least 2 candidates.")
+
+        elif not job_description_compare.strip():
+
+            st.warning("Please enter a job description.")
+
+        else:
+
+            if st.button(
+                "Compare Candidates",
+                key = "compare_candidates"
+            ):
+                comparison_results = []
+
+                for selected_candidate in selected_candidates:
+
+                    candidate_id = candidate_options[selected_candidate]
+
+                    candidate = db.query(Candidate).filter(
+                        Candidate.id == candidate_id
+                    ).first()
+
+                    resume = db.query(Resume).filter(
+                        Resume.candidate_id == candidate_id
+                    ).order_by(Resume.id.desc()).first()
+
+                    if not resume:
+
+                        st.warning(f"No resume found for {candidate.name}")
+
+                        continue
+
+                    try:
+
+                        response = match_resume(resume.id, job_description_compare)
+
+                        comparison_results.append({
+                            "Candidate": candidate.name,
+                            "Candidate ID": candidate.id,
+                            "Resume ID": resume.id,
+                            "TF-IDF Score": response.get("tfidf_score", 0),
+                            "Semantic Score": response.get("semantic_score", 0),
+                            "ML Score": response.get("ml_score", 0),
+                            "Final Score": response.get("final_score", 0),
+                            "Recommendation": response.get("recommendation", "N/A")
+                        })
+
+
+                    except Exception as e:
+
+                        st.error(
+                            f"Could not process."
+                            f"{candidate.name}: {e}"
+                        )
+
+                # Save results
+                st.session_state.comparison_results = comparison_results
+
+            
+                #-------------------------
+                # Comparison Results
+                #-------------------------
+
+            if st.session_state.comparison_results:
+
+                comparison_results = st.session_state.comparison_results
+
+                st.subheader("Comparison Results")
+
+                comparison_display = []
+
+                for result in comparison_results:
+
+                    comparison_display.append({
+                        "Candidate": result["Candidate"],
+                        "TF-IDF": f"{result['TF-IDF Score']:.2f}%",
+                        "Semantic": f"{result['Semantic Score']:.2f}%",
+                        "ML": f"{result['ML Score']:.2f}%",
+                        "Final Score": f"{result['Final Score']:.2f}%",
+                        "Recommendation": result["Recommendation"]
+                    })
+
+                st.dataframe(
+                    comparison_display,
+                    use_container_width = True,
+                    hide_index = True
+                )
+
+
+                #----------------------------
+                # Individual Candidate Scores
+                #----------------------------
+
+                st.subheader("Candidate Scores")
+
+                for result in comparison_results:
+
+                    st.markdown(f"### {result['Candidate']}")
+
+                    col1, col2, col3, col4 = st.columns(4)
+
+                    with col1:
+                            
+                        st.metric("TF-IDF", f"{result['TF-IDF Score']:.2f}%")
+
+                    with col2:
+
+                        st.metric("Semantic", f"{result['Semantic Score']:.2f}%")
+
+                    with col3:
+
+                        st.metric("ML", f"{result['ML Score']:.2f}%")
+
+                    with col4:
+
+                        st.metric("Final Score", f"{result['Final Score']:.2f}%")
+
+                    st.write(
+                        f"Recommendation: "
+                        f"**{result['Recommendation']}**"
+                    )
+
+                    
+                #-----------------------------
+                # AI Candidate Comparison
+                #-----------------------------
+
+                st.subheader("AI Candidate Comparison")
+
+                if st.button(
+                    "Generate AI comparison",
+                    key = "generate_ai_comparison"
+                ):
+                    comparison_prompt = """
+                    You are an AI recruiter.
+
+                    Compare the following candidates for the same job description.
+
+                    JOB DESCRIPTION:
+                    """
+
+                    comparison_prompt += f"""
+
+                    {job_description_compare}
+
+                    CANDIDATES:
+
+                    """
+
+                    for result in comparison_results:
+
+                        candidate = db.query(Candidate).filter(
+                            Candidate.id == result["Candidate ID"]
+                        ).first()
+
+                        resume = db.query(Resume).filter(
+                            Resume.id == result["Resume ID"]
+                        ).first()
+
+                        resume_text = ""
+
+                        if resume:
+                            resume_text = resume.raw_text
+
+                        comparison_prompt += f"""
+
+                        ------------------------------------------
+                        Candidate: {result['Candidate']}
+                        ------------------------------------------
+
+                        Resume Context:
+                        {resume_text}
+
+                        Matching Score:
+                        TF-IDF Scores: {result['TF-IDF Score']:.2f}%
+                        Semantic Score: {result['Semantic Score']:.2f}%
+                        ML Score: {result['ML Score']:.2f}%
+                        Final Score: {result['Final Score']:.2f}%
+                        Recommendation: {result['Recommendation']}
+
+                        """
+
+                    comparison_prompt += """
+
+                    Compare the candidates using only the information provided.
+
+                    For EACH candidate, provide:
+
+                    1. Candidate Summary - maximum 2 sentences
+                    2. Technical Skills - concise bullet list
+                    3. Soft Skills - concise bullet list
+                    4. Education - concise bullet list
+                    5. Work Experience - list the relevant roles and summarize in 1 sentence
+                    6. Projects - concise bullet list
+                    7. Certifications - concise bullet list
+                    8. Experience Level - 1 sentence
+                    9. Relevant Strengths - maximum 3 bullets
+                    10. Potential Skill Gaps - maximum 3 bullets
+                    11. Relevant Skills Matching the Job - maximum 5 bullets
+                    12. Overall Match with the Job - 1-2 sentences
+
+                    Keep the information concise. Do not repeat the same information across sections.
+
+                    Then provide a section called:
+
+                    ## Candidate Comparison
+
+                    Compare the candidates based on:
+
+                    - Technical skills
+                    - Relevant experience
+                    - Education
+                    - Projects
+                    - Job-relevant skills
+                    - Skill gaps
+                    - Matching scores
+
+                    Keep this comparison concise. Use bullet points, not tables.
+
+                    Finally provide:
+
+                    Recruiter Summary
+
+                    Give a concise factual summary of the key differences between the candidates for this job.
+
+                    Do not make a hiring decision or recommend who should be hired.
+                    Do not rank candidates beyond reporting the supplied matching scores.
+                    Do not use phrases such as "strongest candidate", "best candidate",
+                    "prioritize", "hire", or "not viable".
+
+                    Do not invent information.
+                    
+                    Do not infer, assume, or derive skills, tools, certifications,
+                    experience, soft skills, or achievements that are not explicitly
+                    stated in the resume.
+ 
+                    Do not treat something as present merely because it is related to
+                    another skill. For example, do not assume FAISS experience from
+                    ChromaDB experience.
+
+                    If information is not explicitly provided, state:
+                    "Not mentioned in resume."
+                    """
+
+                    try:
+                        ai_response = analyze_resume(comparison_prompt)
+
+                        ai_response = re.sub(
+                             r"^#{1,6}\s+(.+)$",
+                            r"**\1**",
+                            ai_response,
+                            flags = re.MULTILINE
+                        )
+
+                        st.markdown(ai_response)
+
+                    except Exception as e:
+
+                        st.error(f"AI comparison failed: {e}")
+
+
+
+finally:
+    db.close()
+                            
 
 #----------------------#
 # Display Resume Information
