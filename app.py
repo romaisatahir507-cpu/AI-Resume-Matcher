@@ -39,7 +39,222 @@ st.set_page_config(page_title = "AI Resume Matcher",
 
 st.markdown("""
 <style>
-/* Hide Streamlit heading anchor/link icons */
+
+/* =========================================================
+   GLOBAL THEME
+   ========================================================= */
+
+.stApp {
+    background-color: #e5e7eb;
+    color: #1f2937;
+    font-family: "Segoe UI", Arial, sans-serif;
+}
+
+
+/* =========================================================
+   MAIN CONTENT AREA
+   ========================================================= */
+
+.block-container {
+    padding-top: 2.2rem;
+    padding-bottom: 3rem;
+    max-width: 1400px;
+}
+
+
+/* =========================================================
+   MAIN APPLICATION TITLE
+   ========================================================= */
+
+h1 {
+    color: #172554;
+    font-size: 2.6rem !important;
+    font-weight: 700 !important;
+    letter-spacing: -0.5px;
+    margin-bottom: 0.3rem !important;
+}
+
+
+/* =========================================================
+   MAJOR SECTION HEADINGS
+   ========================================================= */
+
+h2 {
+    color: #1e3a5f;
+    font-size: 1.8rem !important;
+    font-weight: 650 !important;
+    margin-top: 2rem !important;
+    margin-bottom: 1rem !important;
+}
+
+
+/* =========================================================
+   SUBSECTION HEADINGS
+   ========================================================= */
+
+h3 {
+    color: #334155;
+    font-size: 1.35rem !important;
+    font-weight: 600 !important;
+    margin-top: 1.5rem !important;
+    margin-bottom: 0.7rem !important;
+}
+
+
+/* =========================================================
+   NORMAL TEXT
+   ========================================================= */
+
+p {
+    color: #475569;
+    font-size: 0.98rem;
+    line-height: 1.6;
+}
+
+
+/* =========================================================
+   INPUT LABELS
+   ========================================================= */
+
+label {
+    color: #334155 !important;
+    font-weight: 600 !important;
+}
+
+
+/* =========================================================
+   TEXT INPUTS / TEXT AREAS
+   ========================================================= */
+
+.stTextInput input,
+.stTextArea textarea {
+    background-color: #ffffff !important;
+    color: #1f2937 !important;
+    border: 1px solid #cbd5e1 !important;
+    border-radius: 8px !important;
+    padding: 0.65rem 0.75rem !important;
+}
+
+
+/* Input focus */
+
+.stTextInput input:focus,
+.stTextArea textarea:focus {
+    border-color: #64748b !important;
+    box-shadow: 0 0 0 1px #64748b !important;
+}
+
+
+/* =========================================================
+   FILE UPLOADER
+   ========================================================= */
+
+[data-testid="stFileUploader"] {
+    background-color: #ffffff;
+    border: 1px solid #cbd5e1;
+    border-radius: 10px;
+    padding: 0.5rem;
+}
+
+
+/* =========================================================
+   BUTTONS
+   ========================================================= */
+
+.stButton > button {
+    background-color: #4f7cac;
+    color: #ffffff;
+    border: none;
+    border-radius: 8px;
+    padding: 0.55rem 1.2rem;
+    font-weight: 600;
+    transition: all 0.2s ease;
+}
+
+
+.stButton > button:hover {
+    background-color: #3f6d99;
+    color: #ffffff;
+    border: none;
+    transform: translateY(-1px);
+}
+
+
+/* =========================================================
+   METRIC CARDS
+   ========================================================= */
+
+[data-testid="stMetric"] {
+    background-color: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    padding: 1rem;
+}
+
+
+/* =========================================================
+   DATAFRAMES / TABLES
+   ========================================================= */
+
+[data-testid="stDataFrame"] {
+    background-color: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    padding: 0.25rem;
+}
+
+
+/* =========================================================
+   ALERT / MESSAGE BOXES
+   ========================================================= */
+
+[data-testid="stAlert"] {
+    border-radius: 8px;
+}
+
+
+/* =========================================================
+   SIDEBAR
+   ========================================================= */
+
+[data-testid="stSidebar"] {
+    background-color: #eef2f7;
+    border-right: 1px solid #dbe2ea;
+}
+
+
+[data-testid="stSidebar"] h2,
+[data-testid="stSidebar"] h3 {
+    color: #1e3a5f !important;
+}
+
+
+/* =========================================================
+   SELECTBOX / MULTISELECT
+   ========================================================= */
+
+[data-baseweb="select"] > div {
+    background-color: #ffffff;
+    border-radius: 8px;
+    border-color: #cbd5e1;
+}
+
+
+/* =========================================================
+   DIVIDERS
+   ========================================================= */
+
+hr {
+    border: none;
+    border-top: 1px solid #dbe2ea;
+    margin: 1.5rem 0;
+}
+
+
+/* =========================================================
+   HIDE STREAMLIT HEADING ANCHOR / LINK ICONS
+   ========================================================= */
+
 [data-testid="stHeaderActionElements"] {
     display: none !important;
 }
@@ -47,8 +262,161 @@ st.markdown("""
 [data-testid="stHeaderActionElements"] svg {
     display: none !important;
 }
+
+
+/* =========================================================
+   GENERAL SPACING
+   ========================================================= */
+
+[data-testid="stVerticalBlock"] {
+    gap: 0.6rem;
+}
+
+
+/* =========================================================
+   RESULT CARDS
+   ========================================================= */
+
+.result-card {
+    background-color: #ffffff;
+    border: 1px solid #d8dee6;
+    border-radius: 12px;
+    padding: 1.2rem 1.4rem;
+    margin: 0.8rem 0 1.2rem 0;
+    box-shadow: 0 2px 6px rgba(15, 23, 42, 0.05);
+}
+
+
+/* =========================================================
+   AI RESPONSE CARD
+   ========================================================= */
+
+.ai-response-card {
+    background-color: #ffffff;
+    border-left: 4px solid #4f7cac;
+    border-radius: 10px;
+    padding: 1.2rem 1.4rem;
+    margin-top: 0.8rem;
+    box-shadow: 0 2px 6px rgba(15, 23, 42, 0.05);
+}
+
+
+/* =========================================================
+   CANDIDATE CARD
+   ========================================================= */
+
+.candidate-card {
+    background-color: #ffffff;
+    border: 1px solid #d8dee6;
+    border-radius: 12px;
+    padding: 1.2rem;
+    margin: 0.8rem 0 1.2rem 0;
+    box-shadow: 0 2px 6px rgba(15, 23, 42, 0.05);
+}
+
+
+/* =========================================================
+   SCORE VALUE
+   ========================================================= */
+
+.score-value {
+    font-size: 1.35rem;
+    font-weight: 700;
+    color: #3f6d99;
+}
+
+
+/* =========================================================
+   CANDIDATE NAME
+   ========================================================= */
+
+.candidate-name {
+    color: #1e3a5f;
+    font-size: 1.25rem;
+    font-weight: 650;
+    margin-bottom: 0.8rem;
+}
+
+
+/* =========================================================
+   SMALL INFORMATION TEXT
+   ========================================================= */
+
+.info-text {
+    color: #64748b;
+    font-size: 0.9rem;
+}
+
+
+/* SIDEBAR */
+[data-testid="stSidebar"] {
+    background-color: #eef2f7;
+    border-right: 1px solid #d8dee6;
+}
+
+[data-testid="stSidebar"] h2 {
+    color: #1e3a5f !important;
+    font-size: 1.35rem !important;
+    font-weight: 700 !important;
+    margin-bottom: 0.2rem !important;
+}
+
+[data-testid="stSidebar"] p {
+    color: #64748b;
+    font-size: 0.9rem;
+}
+
+[data-testid="stSidebar"] .stButton > button {
+    width: 100%;
+    margin-top: 0.5rem;
+}
+
+/* UPLOAD SECTION */
+[data-testid="stFileUploader"] section {
+    background-color: #ffffff;
+    border-radius: 10px;
+}
+
+[data-testid="stFileUploaderDropzone"] {
+    border: 1px dashed #94a3b8 !important;
+    border-radius: 10px !important;
+    background-color: #f8fafc !important;
+}
+
+[data-testid="stFileUploaderDropzone"]:hover {
+    border-color: #4f7cac !important;
+    background-color: #f1f5f9 !important;
+}
+
+
+/* AI RESULT CARDS */
+[data-testid="stVerticalBlockBorderWrapper"] {
+    background-color: #ffffff;
+    border-radius: 12px;
+    border: 1px solid #d8dee6;
+    box-shadow: 0 2px 6px rgba(15, 23, 42, 0.05);
+}
+
+
+/* MATCH SCORE METRICS */
+[data-testid="stMetricValue"] {
+    font-size: 1.15rem !important;
+    font-weight: 650 !important;
+}
+
+[data-testid="stMetricLabel"] {
+    font-size: 0.9rem !important;
+    font-weight: 600 !important;
+}
+
+/* COMPARISON TABLE HEADER */
+[data-testid="stDataFrame"] [role="columnheader"] {
+    color: #1e293b !important;
+    font-weight: 700 !important;
+}
+
 </style>
-""",unsafe_allow_html = True)
+""", unsafe_allow_html=True)
 
 
 
@@ -57,8 +425,10 @@ st.markdown("""
 #----------------------
 
 with st.sidebar:
-    st.header("System")
-    if st.button("Check API Status"):
+    st.header("System Status")
+    st.caption("AI Resume Matcher Services")
+
+    if st.button("Check API Status", use_container_width = True):
         try:
             response = requests.get(
                 "http://127.0.0.1:8000/docs",
@@ -75,14 +445,25 @@ with st.sidebar:
 
 
 st.title("AI Resume Matcher")
-st.write("Upload a candidate resume to extract and store its information.")
-st.header("Upload Candidate Resume")
+st.markdown(
+    "AI-powered resume screening, matching, ranking, and candidate analysis."
+)
 
-candidate_name = st.text_input("Candidate Name")
-candidate_email = st.text_input("Candidate Email")
-candidate_phone = st.text_input("Candidate Phone")
+st.header("Resume Management")
+st.subheader("Upload Candidate Resume")
 
-uploaded_file = st.file_uploader("Upload Resume", type=["pdf", "docx"])
+st.caption("Enter candidate details and upload a PDF or DOCX resume for analysis.")
+
+col1, col2 = st.columns(2)
+
+with col1:
+    candidate_name = st.text_input("Candidate Name", placeholder = "Enter candidate name")
+    candidate_email = st.text_input("Candidate Email", placeholder = "Enter candidate email")
+
+with col2:
+    candidate_phone = st.text_input("Candidate Phone", placeholder = "Enter candidate phone")
+    uploaded_file = st.file_uploader("Upload Resume", type=["pdf", "docx"], help = "Supported formats: PDF and DOCX")
+
 
 
 # Initialize Streamlit session state
@@ -126,7 +507,7 @@ def generate_resume_hash(resume_text):
 
 
 
-if st.button("Upload Resume"):
+if st.button("Upload Resume", use_container_width = True):
 
     if not candidate_name:
 
@@ -282,9 +663,11 @@ if st.button("Upload Resume"):
 
 if st.session_state.resume_analysis:
     
+    st.header("Resume Analysis")
     st.subheader("AI Resume Overview")
 
-    st.markdown(st.session_state.resume_analysis)
+    with st.container(border=True):
+        st.markdown(st.session_state.resume_analysis.replace("<br>", "\n"))
 
 
 #---------------------------
@@ -293,9 +676,11 @@ if st.session_state.resume_analysis:
 
 if st.session_state.job_match_analysis:
 
+    st.header("Job Matching")
     st.subheader("AI Job Match Analysis")
-
-    st.markdown(st.session_state.job_match_analysis)
+    
+    with st.container(border=True):
+        st.markdown(st.session_state.job_match_analysis)
 
 
 
@@ -328,6 +713,7 @@ job_description = ""
 
 if st.session_state.cleaned_text:
     
+    st.header("Job Matching")
     st.subheader("Job Description")
 
     job_description = st.text_area("Paste the job description here:", height = 200)
@@ -362,6 +748,14 @@ if st.button("Match Resume with Job"):
 
                 st.write(api_result)
 
+        except requests.exceptions.ConnectionError:
+
+            st.error(
+                "Unable to connect to the matching service."
+                "Please make sure FastAPI is running and try again."
+            )
+
+
         except Exception as e:
 
             st.error(f"Matching Error: {str(e)}")
@@ -389,7 +783,11 @@ if st.button("Rank Candidates"):
 
             db = SessionLocal()
 
-            resumes = db.query(Resume).order_by(Resume.id.desc()).all()
+            # Get all resumes
+            resumes = (
+                db.query(Resume).order_by(Resume.id.desc()).all()
+            )
+
             st.write(f"Total resumes found: {len(resumes)}")
 
             if not resumes:
@@ -398,46 +796,84 @@ if st.button("Rank Candidates"):
 
             else:
 
+                # Load all candidates once
+                candidates = db.query(Candidate).all()
+
+                candidate_lookup = {
+                    candidate.id: candidate.name
+                    for candidate in candidates
+                }
+
                 ranking_results = []
 
-                with st.spinner("Ranking candidates..."):
+                # Progress bar
+                progress_bar = st.progress(0)
 
-                    for resume in resumes:
+                # Status message
+                status_text = st.empty()
 
-                        try:
+                total_resumes = len(resumes)
 
-                            api_result = match_resume(resume.id, ranking_job_description)
+                for index, resume in enumerate(resumes):
 
-                            candidate = (db.query(Candidate).filter(Candidate.id == resume.candidate_id).first())
+                    candidate_name = candidate_lookup.get(
+                        resume.candidate_id,
+                        "Unknown"
+                    )
 
-                            ranking_results.append({
-                                "Candidate": candidate.name if candidate else "Unkonown",
-                                "Resume ID": resume.id,
-                                "TF-IDF Score": api_result.get("tfidf_score", 0),
-                                "Semantic Score": api_result.get("semantic_score", 0),
-                                "Final Score": api_result.get("final_score", 0),
-                                "Recommendation": api_result.get("recommendation", "N/A")
-                            })
+                    status_text.write(
+                        f"Processing {index + 1} of {total_resumes}: "
+                        f"{candidate_name}"
+                    )
 
-                        except Exception as e:
+                    try:
 
-                            st.warning(f"Could not process Resume ID {resume.id}: {str(e)}")
+                        api_result = match_resume(
+                            resume.id,
+                            ranking_job_description
+                        )
+
+                        ranking_results.append({
+                            "Candidate": candidate_name,
+                            "Resume ID": resume.id,
+                            "TF-IDF Score": api_result.get("tfidf_score", 0),
+                            "Semantic Score": api_result.get("semantic_score", 0),
+                            "Final Score": api_result.get("final_score", 0),
+                            "Recommendation": api_result.get("recommendation", "N/A")
+                        })
+
+                    except Exception as e:
+
+                        st.warning(
+                            f"Could not process Resume ID "
+                            f"{resume.id}: {str(e)}"
+                        )
+
+                    # Update progress 
+                    progress_bar.progress(
+                        (index + 1) / total_resumes
+                    )
 
                 db.close()
 
-                # Sort candidates by final score
+                status_text.empty()
+
+                # Sort by final score
                 ranking_results = sorted(
-                    ranking_results,
-                    key=lambda x: x["Final Score"],
-                    reverse=True
+                    ranking_results, 
+                    key = lambda x: x["Final Score"],
+                    reverse = True
                 )
 
-                # Add ranking position
-
-                for rank, result in enumerate(ranking_results, start=1):
+                # Assign ranks
+                for rank, result in enumerate(ranking_results, start = 1):
                     result["Rank"] = rank
 
-                st.subheader("Candidate Rankings")
+                st.subheader("Ranking Results")
+
+                st.caption(
+                    "Candidates ranked according to the calculated matching scores."
+                )
 
                 ranking_table = []
 
@@ -454,10 +890,14 @@ if st.button("Rank Candidates"):
 
                 st.dataframe(
                     ranking_table,
-                    use_container_width=True,
-                    hide_index=True
+                    width = "stretch",
+                    hide_index = True
                 )
 
+                st.success(
+                    f"Ranking completed successfully for "
+                    f"{len(ranking_results)} candidates."
+                )
 
         except Exception as e:
 
@@ -471,17 +911,16 @@ if st.button("Rank Candidates"):
 
 st.header("AI Recruiter Chatbot")
 
-recruiter_question = st.text_input("Ask a question about the candidate")
+recruiter_question = st.text_input(
+    "Recruiter Question",
+    placeholder="Ask about candidate skills, experience, education, or projects..."
+)
 
 if st.button("Ask Recruiter AI"):
 
     if not recruiter_question.strip():
 
         st.warning("Please enter a question.")
-
-    elif not st.session_state.resume_id:
-
-        st.warning("Please upload a resume first.")
 
     else:
 
@@ -522,9 +961,10 @@ if st.button("Ask Recruiter AI"):
                 # Generate answer using Groq
                 recruiter_answer = generate_llm_response(recruiter_prompt)
 
-                st.subheader("AI Recruiter Response")
+                st.subheader("Recruiter AI Response")
 
-                st.write(recruiter_answer)
+                with st.container(border=True):
+                    st.markdown(recruiter_answer)
 
 
         except Exception as e:
@@ -643,6 +1083,8 @@ try:
 
                 st.subheader("Comparison Results")
 
+                st.caption("Side-by-side matching scores for the selected candidates.")
+
                 comparison_display = []
 
                 for result in comparison_results:
@@ -667,11 +1109,14 @@ try:
                 # Individual Candidate Scores
                 #----------------------------
 
-                st.subheader("Candidate Scores")
+                st.subheader("Candidate Match Scores")
 
                 for result in comparison_results:
 
-                    st.markdown(f"### {result['Candidate']}")
+                    st.markdown(
+                        f'<div class="candidate-name">{result["Candidate"]}</div>',
+                        unsafe_allow_html = True
+                    )
 
                     col1, col2, col3, col4 = st.columns(4)
 
@@ -691,17 +1136,19 @@ try:
 
                         st.metric("Final Score", f"{result['Final Score']:.2f}%")
 
-                    st.write(
-                        f"Recommendation: "
-                        f"**{result['Recommendation']}**"
+                    st.markdown(
+                        f'<div class="info-text">Recommendation: '
+                        f'<strong>{result["Recommendation"]}</strong></div>',
+                        unsafe_allow_html=True
                     )
+                    
 
                     
                 #-----------------------------
                 # AI Candidate Comparison
                 #-----------------------------
 
-                st.subheader("AI Candidate Comparison")
+                st.subheader("AI-Powered Candidate Comparison")
 
                 if st.button(
                     "Generate AI comparison",
@@ -846,7 +1293,10 @@ finally:
 
 if st.session_state.cleaned_text:
 
-    st.subheader("Cleaned Resume Text.")
+    st.header("Resume Information")
+    st.subheader("Cleaned Resume Text")
+
+    st.caption("Normalized resume text extracted and processed by the application.")
     st.text_area("Resume Content", st.session_state.cleaned_text, height=400)
     st.write(f"Candidate ID: {st.session_state.candidate_id}")
     st.write(f"Resume ID: {st.session_state.resume_id}")
