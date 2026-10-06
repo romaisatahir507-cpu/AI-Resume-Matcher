@@ -22,6 +22,9 @@ uploads/
 *.sqlite
 *.sqlite3
 
+# ChromaDB
+chroma_db/
+
 # VS Code
 .vscode/
 
