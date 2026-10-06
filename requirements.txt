@@ -9,4 +9,10 @@ python-docx
 sentence-transformers
 scikit-learn
 groq
-faiss-cpu
+chromadb
+fastapi
+uvicorn
+requests
+joblib
+pydantic
+python-multipart

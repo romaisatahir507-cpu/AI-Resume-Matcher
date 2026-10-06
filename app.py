@@ -26,6 +26,12 @@ from services.api_client import match_resume
 
 
 
+API_URL = os.getenv(
+    "API_URL",
+    "http://127.0.0.1:8000"
+)
+
+
 UPLOAD_DIR = "uploads"
 
 os.makedirs(UPLOAD_DIR, exist_ok=True)
@@ -431,7 +437,7 @@ with st.sidebar:
     if st.button("Check API Status", use_container_width = True):
         try:
             response = requests.get(
-                "http://127.0.0.1:8000/docs",
+                f"{API_URL}/docs",
                 timeout = 5
             )
 
